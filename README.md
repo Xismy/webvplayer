@@ -1,7 +1,7 @@
 ## Build steps
 ### Rest API
 ````sh
-cmake -B rest/build -G Ninja rest`
+cmake -B rest/build -G Ninja rest
 ninja -C rest/build -j 4
 ````
 ### Front end
