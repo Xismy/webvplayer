@@ -30,6 +30,9 @@ jobs:
       run: |
         echo "build-output-dir=${{ github.workspace }}/rest/build" >> "$GITHUB_OUTPUT"
 
+    - name: Install dependencies
+      run: sudo apt-get update && sudo apt-get install asio-dev
+
     - name: Configure CMake
       run: >
         cmake -B ${{ steps.strings.outputs.build-output-dir }}
