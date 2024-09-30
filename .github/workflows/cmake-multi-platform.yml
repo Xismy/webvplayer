@@ -14,12 +14,12 @@ jobs:
       fail-fast: true
       
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-24.04]
         build_type: [Release]
         include:
           - os: ubuntu-latest
-            c_compiler: gcc-12
-            cpp_compiler: g++-12
+            c_compiler: gcc-13
+            cpp_compiler: g++-13
     steps:
     - uses: actions/checkout@v4
 
@@ -30,7 +30,7 @@ jobs:
         echo "build-output-dir=${{ github.workspace }}/rest/build" >> "$GITHUB_OUTPUT"
 
     - name: Install dependencies
-      run: sudo apt-get update && sudo apt-get install gcc-12 g++-12 libasio-dev libmpv-dev
+      run: g++ --version; sudo apt-get update && sudo apt-get install gcc-13 g++-13 libasio-dev libmpv-dev
 
     - name: Configure CMake
       run: >
