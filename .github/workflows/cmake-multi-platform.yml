@@ -30,7 +30,7 @@ jobs:
         echo "build-output-dir=${{ github.workspace }}/rest/build" >> "$GITHUB_OUTPUT"
 
     - name: Install dependencies
-      run: sudo apt-get update && sudo apt-get install libasio-dev libmpv-dev
+      run: sudo apt-get update && sudo apt-get install gcc-13 g++-13 libasio-dev libmpv-dev
 
     - name: Configure CMake
       run: >
