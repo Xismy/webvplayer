@@ -25,7 +25,7 @@ namespace webvplayer {
 		static constexpr TimePosType timePosType(std::string_view const tpt) noexcept {
 			if(tpt == "relative")
 				return TimePosType::RELATIVE;
-			if(tpt == "absoute")
+			if(tpt == "absolute")
 				return TimePosType::ABSOLUTE;
 			if(tpt == "abs_norm")
 				return TimePosType::ABS_NORM;

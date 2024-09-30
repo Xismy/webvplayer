@@ -141,9 +141,6 @@ crow::response Server::listDir(string const &dir) const {
 		vector<string> dirList;
 		auto path = resources_.at(dir);
 		auto filter = std::ranges::views::filter(isValidVideoExtension);
-		auto transform = std::ranges::views::transform([](auto const &dir) {
-			return dir.path().filename();
-		});
 
 		auto filteredDirs = fs::recursive_directory_iterator(path) | filter;
 		std::ranges::transform(filteredDirs, std::back_inserter(dirList), [](auto const &dir) { return dir.path().filename(); });
