@@ -4,9 +4,10 @@
 #include "crow/app.h"
 #include "crow/json.h"
 #include "crow/middlewares/cors.h"
+#include "crow/websocket.h"
 #include <exception>
-#include <unordered_map>
 #include <unordered_set>
+#include <unordered_map>
 #include <string>
 #include <filesystem>
 #include <webvplayer/video_player.hpp>
@@ -65,6 +66,7 @@ namespace webvplayer {
 
 	private:
 		crow::App<crow::CORSHandler> app_;
+		std::unordered_set<crow::websocket::connection const*> conns_;
 		std::unordered_map<std::string, fs::path> resources_;
 		VideoPlayer *player_ = nullptr;
 
@@ -84,6 +86,8 @@ namespace webvplayer {
 		crow::response pause() const;
 		crow::response stop() const;
 		crow::response setTime(crow::json::rvalue const &body) const;
+		void addConnection(crow::websocket::connection &conn);
+		void removeConnection(crow::websocket::connection &conn);
 		
 		static VideoPlayerId mapVideoPlayer(std::string const &name) {
 			if(name == "mpv")
