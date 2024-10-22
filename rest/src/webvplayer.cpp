@@ -1,12 +1,15 @@
 #include "webvplayer/webvplayer.hpp"
+#include "crow/app.h"
 #include "crow/json.h"
 #include "crow/logging.h"
+#include "crow/websocket.h"
 #include "webvplayer/video_player.hpp"
 #include "webvplayer/mpv_video_player.hpp"
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <ranges>
+#include <unordered_set>
 
 using webvplayer::Server;
 using webvplayer::VideoPlayer;
@@ -76,6 +79,11 @@ Server::Server() noexcept {
 	CROW_ROUTE(app_, "/serie/<string>")([this](string const &dir) { return this->listDir(dir); });
 	CROW_ROUTE(app_, "/player").methods(crow::HTTPMethod::GET)([this]() { return this->getPlayerStatus(); });
 	CROW_ROUTE(app_, "/player").methods(crow::HTTPMethod::POST)([this](crow::request const &req) { return this->dispatchPlayerAction(req); });
+	CROW_WEBSOCKET_ROUTE(app_, "/player_update").onopen(
+		[this](crow::websocket::connection & conn) { this->addConnection(conn); }
+	).onclose(
+		[this](crow::websocket::connection & conn, std::string const &) { this->removeConnection(conn); }
+	);
 }
 
 void Server::run(vector<string> const &args) {
@@ -266,6 +274,16 @@ crow::response Server::setTime(crow::json::rvalue const &body) const {
 		player_->go(body["value"].i());
 
 	return crow::response(crow::OK);
+}
+
+void Server::addConnection(crow::websocket::connection &conn) {
+    CROW_LOG_INFO << "Client connected: " << conn.get_remote_ip();
+    conns_.insert(&conn);
+}
+
+void Server::removeConnection(crow::websocket::connection &conn) {
+    CROW_LOG_INFO << "Client disconnected: " << conn.get_remote_ip();
+    conns_.erase(&conn);
 }
 
 Server::~Server() {
