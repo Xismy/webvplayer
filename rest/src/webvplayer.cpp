@@ -58,21 +58,6 @@ namespace {
 	}
 }
 
-constexpr Server::VideoPlayerAction videoPlayerAction(std::string_view const &action) {
-	using Action = Server::VideoPlayerAction;
-	if(action == "play")
-		return Action::PLAY;
-	if(action == "stop")
-		return Action::STOP;
-	if(action == "pause")
-		return Action::PAUSE;
-	if(action == "resume")
-		return Action::RESUME;
-	if(action == "goto")
-		return Action::GOTO;
-	return Action::UNKNOWN;
-}
-
 Server::Server() noexcept {
 	app_.loglevel(crow::LogLevel::DEBUG);
 	CROW_ROUTE(app_, "/")([this]() { return this->listResources(); });
@@ -194,11 +179,14 @@ crow::response Server::getPlayerStatus() const {
 
 crow::response Server::dispatchPlayerAction(crow::request const &req) const {
 	auto body = crow::json::load(req.body);
-	if(!body.has("action"))
+	
+	if(!body.has("action")) {
+		CROW_LOG_ERROR << "Missing parameter: \"action\".";
 		return crow::response(crow::BAD_REQUEST);
-
+	}
+	
 	string actionStr = body["action"].s();
-	switch(videoPlayerAction(actionStr)) {
+	switch(getActionFromString(actionStr)) {
 		case VideoPlayerAction::PLAY:
 			return play(body);
 		case VideoPlayerAction::RESUME:
@@ -211,13 +199,16 @@ crow::response Server::dispatchPlayerAction(crow::request const &req) const {
 			return setTime(body);
 		case VideoPlayerAction::UNKNOWN:
 		default:
+			CROW_LOG_ERROR << "Unknown action: \"" << actionStr << "\".";
 			return crow::response(crow::BAD_REQUEST);
 	}
 }
 
 crow::response Server::play(crow::json::rvalue const &body) const {
-	if(!body.has("serie") || !body.has("file"))
+	if(!body.has("serie") || !body.has("file")) {
+		CROW_LOG_ERROR << "Missing parameter: \"serie\" or \"file\".";
 		return crow::response(crow::BAD_REQUEST);
+	}
 
 	string resStr = body["serie"].s();
 	fs::path res;
@@ -244,27 +235,47 @@ crow::response Server::play(crow::json::rvalue const &body) const {
 	CROW_LOG_INFO << "Playing [" << itFile->path().string() << "].";
 	player_->play(itFile->path());
 
+	sendEvent_(body);
+
 	return crow::response(crow::OK);
 }
 
 crow::response Server::resume() const {
 	player_->resume();
+
+	crow::json::wvalue event;
+	event["action"] = string(getActionString_(VideoPlayerAction::RESUME));
+	event["time-pos"] = player_->currentTime().count();
+	sendEvent_(event);
+
 	return crow::response(crow::OK);
 }
 
 crow::response Server::pause() const {
 	player_->pause();
+
+	crow::json::wvalue event;
+	event["action"] = string(getActionString_(VideoPlayerAction::PAUSE));
+	event["time-pos"] = player_->currentTime().count();
+	sendEvent_(event);
 	return crow::response(crow::OK);
 }
 
 crow::response Server::stop() const {
 	player_->stop();
+	
+	crow::json::wvalue event;
+	event["action"] = string(getActionString_(VideoPlayerAction::STOP));
+	sendEvent_(event);
+
 	return crow::response(crow::OK);
 }
 
 crow::response Server::setTime(crow::json::rvalue const &body) const {
-	if(!body.has("value"))
+	if(!body.has("value")) {
+		CROW_LOG_ERROR << "Missing parameter \"value\".";
 		return crow::response(crow::BAD_REQUEST);
+	}
 
 	if(body.has("type")) {
 		string type = body["type"].s();
@@ -272,6 +283,11 @@ crow::response Server::setTime(crow::json::rvalue const &body) const {
 	}
 	else
 		player_->go(body["value"].i());
+
+	crow::json::wvalue event;
+	event["action"] = string(getActionString_(VideoPlayerAction::GOTO));
+	event["time-pos"] = player_->currentTime().count();
+	sendEvent_(event);
 
 	return crow::response(crow::OK);
 }
@@ -284,6 +300,13 @@ void Server::addConnection(crow::websocket::connection &conn) {
 void Server::removeConnection(crow::websocket::connection &conn) {
     CROW_LOG_INFO << "Client disconnected: " << conn.get_remote_ip();
     conns_.erase(&conn);
+}
+
+
+void Server::sendEvent_(crow::json::wvalue const &json) const {
+    for(auto *conn : conns_) {
+		conn->send_text(json.dump());
+    }
 }
 
 Server::~Server() {
