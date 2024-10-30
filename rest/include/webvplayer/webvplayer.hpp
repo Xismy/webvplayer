@@ -3,9 +3,13 @@
 
 #include "crow/app.h"
 #include "crow/json.h"
+#include "crow/logging.h"
 #include "crow/middlewares/cors.h"
 #include "crow/websocket.h"
+#include <array>
 #include <exception>
+#include <stdexcept>
+#include <string_view>
 #include <unordered_set>
 #include <unordered_map>
 #include <string>
@@ -66,9 +70,22 @@ namespace webvplayer {
 
 	private:
 		crow::App<crow::CORSHandler> app_;
-		std::unordered_set<crow::websocket::connection const*> conns_;
+		std::unordered_set<crow::websocket::connection*> conns_;
 		std::unordered_map<std::string, fs::path> resources_;
 		VideoPlayer *player_ = nullptr;
+
+		constexpr static auto VideoPlayerActions_ = std::to_array<std::string_view>({
+			"N/A",
+			"play",
+			"stop",
+			"pause",
+			"resume",
+			"goto"
+		});
+	
+		void sendEvent_(crow::json::wvalue const &json) const;
+		static std::string_view getActionString_(VideoPlayerAction action) { return VideoPlayerActions_[static_cast<int>(action)]; }
+		static VideoPlayerAction getActionFromString_(std::string_view const &action) { return static_cast<VideoPlayerAction>(std::ranges::find(VideoPlayerActions_, action) - VideoPlayerActions_.begin());  }
 
 	public:
 		Server() noexcept;
@@ -94,6 +111,12 @@ namespace webvplayer {
 				return VideoPlayerId::MPV;
 
 			return Server::VideoPlayerId::UNDEFINED;
+		}
+
+		static VideoPlayerAction getActionFromString(std::string_view const &action) { 
+			auto it = std::ranges::find(VideoPlayerActions_, action);
+			if(it == VideoPlayerActions_.end()) throw std::out_of_range{"VideoPlayerAction out of range."};
+			return static_cast<VideoPlayerAction>(it - VideoPlayerActions_.begin());
 		}
 
 		static VideoPlayer *getPlayerByName(std::string const &backend);
