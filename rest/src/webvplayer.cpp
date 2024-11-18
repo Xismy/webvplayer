@@ -11,6 +11,8 @@
 #include <ranges>
 #include <unordered_set>
 
+#include "webvplayer/webplayer_exceptions.hpp"
+
 using webvplayer::Server;
 using webvplayer::VideoPlayer;
 using std::vector;
@@ -186,7 +188,7 @@ crow::response Server::dispatchPlayerAction(crow::request const &req) const {
 	}
 	
 	string actionStr = body["action"].s();
-	switch(getActionFromString(actionStr)) {
+	switch(VideoPlayerActionR(actionStr)) {
 		case VideoPlayerAction::PLAY:
 			return play(body);
 		case VideoPlayerAction::RESUME:
@@ -243,9 +245,10 @@ crow::response Server::play(crow::json::rvalue const &body) const {
 crow::response Server::resume() const {
 	player_->resume();
 
-	crow::json::wvalue event;
-	event["action"] = string(getActionString_(VideoPlayerAction::RESUME));
-	event["time-pos"] = player_->currentTime().count();
+	crow::json::wvalue event {
+		{"action", VideoPlayerActionR(VideoPlayerAction::RESUME).str()},
+		{"time-pos", player_->currentTime().count()}
+	};
 	sendEvent_(event);
 
 	return crow::response(crow::OK);
@@ -254,9 +257,10 @@ crow::response Server::resume() const {
 crow::response Server::pause() const {
 	player_->pause();
 
-	crow::json::wvalue event;
-	event["action"] = string(getActionString_(VideoPlayerAction::PAUSE));
-	event["time-pos"] = player_->currentTime().count();
+	crow::json::wvalue event {
+		{"action", VideoPlayerActionR(VideoPlayerAction::PAUSE).str()},
+		{"time-pos", player_->currentTime().count()}
+	};
 	sendEvent_(event);
 	return crow::response(crow::OK);
 }
@@ -264,8 +268,9 @@ crow::response Server::pause() const {
 crow::response Server::stop() const {
 	player_->stop();
 	
-	crow::json::wvalue event;
-	event["action"] = string(getActionString_(VideoPlayerAction::STOP));
+	crow::json::wvalue event {
+		{"action", VideoPlayerActionR(VideoPlayerAction::STOP).str()}
+	};
 	sendEvent_(event);
 
 	return crow::response(crow::OK);
@@ -284,9 +289,10 @@ crow::response Server::setTime(crow::json::rvalue const &body) const {
 	else
 		player_->go(body["value"].i());
 
-	crow::json::wvalue event;
-	event["action"] = string(getActionString_(VideoPlayerAction::GOTO));
-	event["time-pos"] = player_->currentTime().count();
+	crow::json::wvalue event {
+		{"action", VideoPlayerActionR(VideoPlayerAction::GOTO).str()},
+		{"time-pos", player_->currentTime().count()}
+	};
 	sendEvent_(event);
 
 	return crow::response(crow::OK);

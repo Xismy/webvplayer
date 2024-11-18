@@ -3,8 +3,6 @@
 #include <algorithm>
 #include <array>
 #include <stdexcept>
-#include <string_view>
-#include <type_traits>
 
 namespace detail_ {
 	template<std::size_t N>
@@ -18,9 +16,29 @@ namespace detail_ {
 
 namespace webvplayer {
 	template <typename T, detail_::StringLiteral ...Names>
-	struct EnumClassReflection {
-		static constexpr char const *toString(T const &val) { 
-			auto idx = static_cast< std::underlying_type_t<T> >(val);
+	class EnumClassReflection {
+		T val_;
+
+	public:
+		constexpr EnumClassReflection(T val) : val_(val) {
+			if(static_cast<std::underlying_type_t<T> >(val) >= sizeof...(Names))
+				throw std::out_of_range("");
+		}
+
+		EnumClassReflection (std::string_view const & str) {
+			constexpr std::array<char const*, sizeof...(Names)> list {Names...};
+			for(std::underlying_type_t<T> i = 0; i < sizeof ...(Names); ++i) {
+				if(std::string_view(list[i]) == str) {
+					val_ = static_cast<T>(i);
+					return;
+				}
+			}
+
+			throw std::out_of_range("");
+		}
+
+		constexpr char const *str() const { 
+			auto idx = static_cast< std::underlying_type_t<T> >(val_);
 
 			if(idx >= sizeof ...(Names))
 				throw std::out_of_range("");
@@ -28,21 +46,15 @@ namespace webvplayer {
 			constexpr std::array<char const*, sizeof...(Names)> list {Names...};
 			return list[idx]; 
 		}
-		
-		template <T val>
-		static consteval char const *toString() { return toString(val); }
 
-		static constexpr T fromString(std::string_view const & str) {
-			constexpr std::array<char const*, sizeof...(Names)> list {Names...};
-			for(std::underlying_type_t<T> i = 0; i < sizeof ...(Names); ++i)
-				if(std::string_view(list[i]) == str)
-					return static_cast<T>(i);
+		consteval operator char const *() const { return str(); }
 
-			throw std::out_of_range("");
-		}
-
-		template <detail_::StringLiteral Name>
-		static consteval T fromString() { return fromString(std::string_view(Name)); }
+		constexpr operator T() const { return val_; }
 	};
+
+	template <typename T, detail_::StringLiteral ...Names>
+	::std::ostream &operator<<(std::ostream &out, EnumClassReflection<T, Names...> const &element) {
+		return out << element.str();
+	} 
 }
 #endif
