@@ -21,13 +21,13 @@ namespace webvplayer {
 
 	public:
 		constexpr EnumClassReflection(T val) : val_(val) {
-			if(static_cast<std::underlying_type_t<T> >(val) >= sizeof...(Names))
+			if(static_cast<std::size_t>(val) >= sizeof...(Names))
 				throw std::out_of_range("");
 		}
 
 		EnumClassReflection (std::string_view const & str) {
 			constexpr std::array<char const*, sizeof...(Names)> list {Names...};
-			for(std::underlying_type_t<T> i = 0; i < sizeof ...(Names); ++i) {
+			for(std::size_t i = 0; i < sizeof ...(Names); ++i) {
 				if(std::string_view(list[i]) == str) {
 					val_ = static_cast<T>(i);
 					return;
@@ -38,7 +38,7 @@ namespace webvplayer {
 		}
 
 		constexpr char const *str() const { 
-			auto idx = static_cast< std::underlying_type_t<T> >(val_);
+			std::size_t idx = static_cast<std::size_t>(val_);
 
 			if(idx >= sizeof ...(Names))
 				throw std::out_of_range("");

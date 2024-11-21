@@ -151,12 +151,13 @@ crow::response Server::listDir(string const &dir) const {
 }
 
 crow::response Server::getPlayerStatus() const {
-	crow::json::wvalue status{crow::json::wvalue::object()};
-	status["status"] = static_cast<int>(player_->status());
-	status["time-pos"] = player_->currentTime().count();
-	status["length"] = player_->duration().count();
-	status["serie"] = nullptr;
-	status["file"] = nullptr;
+	crow::json::wvalue status {
+		{"status", static_cast<int>(player_->status())},
+		{"time-pos", player_->currentTime().count()},
+		{"length", player_->duration().count()},
+		{"serie", nullptr},
+		{"file", nullptr}
+	};
 
 	fs::path file = player_->file();
 

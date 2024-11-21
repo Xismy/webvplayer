@@ -1,4 +1,5 @@
 #include "webvplayer/mpv_video_player.hpp"
+#include "crow/logging.h"
 #include "webvplayer/video_player.hpp"
 #include <mpv/client.h>
 #include <optional>
@@ -91,14 +92,14 @@ namespace {
 		vector<string> list;
 		std::optional<std::size_t> selected;
 
-		for(int i=0; i< nTracks; ++i) {
+		for(int64_t i=0; i < nTracks; ++i) {
 			char const *type = mpv_get_property_string(mpv, std::format("track-list/{}/type", i).c_str());
 			if(string(type) == targetType) {
 				char const *trackTitle = mpv_get_property_string(mpv, std::format("track-list/{}/title", i).c_str());
 				if(trackTitle != nullptr)
 					list.push_back(trackTitle);
 
-				bool bSelected;
+				int bSelected;
 				mpv_get_property(mpv, std::format("track-list/{}/selected", i).c_str(), MPV_FORMAT_FLAG, &bSelected);
 				if(bSelected)
 				    selected = i;

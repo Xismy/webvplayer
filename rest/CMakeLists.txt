@@ -14,9 +14,10 @@ find_library(CMAKE_MPV NAMES mpv)
 FetchContent_MakeAvailable(Crow)
 
 add_executable(webvplayer)
-target_compile_features(webvplayer PUBLIC cxx_std_23)
+target_compile_features(webvplayer PRIVATE cxx_std_23)
+target_compile_options(webvplayer PRIVATE -Wall -Wextra -Werror)
 target_link_libraries(webvplayer ${CMAKE_MPV})
-target_include_directories(webvplayer PUBLIC
+target_include_directories(webvplayer PRIVATE
 	include
 	${crow_SOURCE_DIR}/include
 )
