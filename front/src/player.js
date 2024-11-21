@@ -37,25 +37,50 @@ function ffrw(delta) {
 	fetch('http://webvplayer:8008/player', {method: 'POST', body: JSON.stringify(json)});
 }
 
+function processSocketEvent(eventData, setState) {
+	setState((oldState) => {
+		state = {...oldState}
+		switch(eventData.action) {
+			case 'play':
+				state.status = Status.PLAYING;
+				state.serie = eventData.serie;
+				state.file = eventData.file;
+				break;
+			case 'stop':
+				state.status = Status.IDLE;
+				break;
+			case 'pause':
+				state.status = Status.PAUSED;
+				break;
+			case 'resume':
+				state.status = Status.PLAYING;
+				break;
+		}
+
+		console.log(JSON.stringify(state));
+
+		return state;
+	});
+}
+
 const ImgButton = ({img, onClick}) => <button onClick={onClick}><img src={img} /></button>;
 const HideableImgButton = ({img, onClick, bHidden}) => <button className={bHidden? 'Hidden' : 'Visible'} onClick={onClick}><img src={img} /></button>;
 
 export const Player = ({serie, chapter}) => {
 	const [state, setState] = useState({serie: null, file: null});
-	const [update, setUpdate] = useState(true);
-
+	
 	if(chapter != null && (serie != state.serie || chapter != state.file))
 		setState({...state, serie:serie, file: chapter});
 
 	useEffect(() => {
-		if(!update) return;
+		new WebSocket('ws://webvplayer:8008/player_update').onmessage = (event) => { processSocketEvent(JSON.parse(event.data), setState); }
+
 		fetch('http://webvplayer:8008/player')
 		.then(response => response.json())
 		.then(json => {
 			setState(json);
-			setUpdate(false);
 		});
-	}, [update]);
+	}, []);
 
 	return state.file == null? <></> :
 	<div>
@@ -63,9 +88,9 @@ export const Player = ({serie, chapter}) => {
 	    <div className="Player">
 		<ImgButton img={rwIcon} onClick={() => ffrw(-5)} />
 		<div>
-			<HideableImgButton img={stopIcon} bHidden={state.status != Status.PLAYING} onClick={() => {stopVideo(); setUpdate(true)} } />
-			<HideableImgButton img={pauseIcon} bHidden={state.status != Status.PLAYING} onClick={() => {pause(); setUpdate(true)} } />
-			<HideableImgButton img={playIcon} bHidden={state.status == Status.PLAYING} onClick={() => {playVideo(state); setUpdate(true)} } />
+			<HideableImgButton img={stopIcon} bHidden={state.status != Status.PLAYING} onClick={() => {stopVideo();} } />
+			<HideableImgButton img={pauseIcon} bHidden={state.status != Status.PLAYING} onClick={() => {pause();} } />
+			<HideableImgButton img={playIcon} bHidden={state.status == Status.PLAYING} onClick={() => {playVideo(state);} } />
 		</div>
 		<ImgButton img={ffIcon} onClick={() => ffrw(5)} />
 	    </div>
