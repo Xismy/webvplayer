@@ -1,1 +1,15 @@
-{"resources":[{"name":"Series","path":"/home/user"}],"front host":"webvplayer","front port":"3000","api host":"webvplayer","api port":"8008","video player":"mpv"}
+{
+	"resources":[
+		{
+			"name":"Collection",
+			"path":"/home/user/collecction/collection1",
+			"translation regex": "(CollectionName)discarded text([0-9]+).*\\.mp4",
+			"translation pattern": "{1} {2}"
+		}
+	],
+	"front host":"webvplayer",
+	"front port":"3000",
+	"api host":"webvplayer",
+	"api port":"8008",
+	"video player":"mpv"
+}
