@@ -7,14 +7,11 @@
 #include "crow/websocket.h"
 #include "enum_class_reflection.hpp"
 #include <unordered_set>
-#include <unordered_map>
 #include <string>
-#include <filesystem>
+#include "webvplayer/resource.hpp"
 #include <webvplayer/video_player.hpp>
 
 namespace webvplayer {
-	namespace fs = std::filesystem;
-
 
 	class Server {
 	public:
@@ -44,7 +41,7 @@ namespace webvplayer {
 	private:
 		crow::App<crow::CORSHandler> app_;
 		std::unordered_set<crow::websocket::connection*> conns_;
-		std::unordered_map<std::string, fs::path> resources_;
+		std::unordered_set<ResourceCollection> resources_;
 		VideoPlayer *player_ = nullptr;
 
 		void sendEvent_(crow::json::wvalue const &json) const;
@@ -56,8 +53,8 @@ namespace webvplayer {
 		Server(Server &&other) = delete;
 		Server &operator=(Server &&other) = delete;
 		void run(std::vector<std::string> const &args);
-		crow::response listResources() const;
-		crow::response listDir(std::string const &dir) const;
+		crow::response listCollections() const;
+		crow::response listResources(std::string const &collection) const;
 		crow::response getPlayerStatus() const;
 		crow::response dispatchPlayerAction(crow::request const &req) const;
 		crow::response play(crow::json::rvalue const &req) const;

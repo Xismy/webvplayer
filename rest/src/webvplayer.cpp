@@ -3,12 +3,14 @@
 #include "crow/json.h"
 #include "crow/logging.h"
 #include "crow/websocket.h"
+#include "webvplayer/resource.hpp"
 #include "webvplayer/video_player.hpp"
 #include "webvplayer/mpv_video_player.hpp"
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <ranges>
+#include <string>
 #include <unordered_set>
 
 #include "webvplayer/webplayer_exceptions.hpp"
@@ -21,23 +23,13 @@ using std::ifstream;
 namespace fs = std::filesystem;
 
 namespace {
-	bool isValidVideoExtension(fs::directory_entry const &file) {
-		static std::unordered_set<std::string> const VALID_EXTENSIONS = {
-			".3gp", ".amv", ".asf", ".avi", ".divx", ".dv", ".f4v", ".flv", ".m1v", ".m2ts", ".m2v", ".m4v", 
-			".mkv", ".mov", ".mp4", ".mpe", ".mpeg", ".mpg", ".mpv", ".mxf", ".mts", ".ogv", ".qt", ".rm", 
-			".rmvb", ".ts", ".vob", ".webm", ".wmv", ".xvid", ".rar"
-		};
+	string pathReverseLookup(std::unordered_set<webvplayer::ResourceCollection> const &set, fs::path const &path) {
+		auto found = std::ranges::find_if(set, [&path] (auto &entry){ return entry.path() == path; });
 
-		return VALID_EXTENSIONS.contains(file.path().extension());
-	}
-
-	string pathReverseLookup(std::unordered_map<string, fs::path> const &map, fs::path const &path) {
-		auto found = std::ranges::find_if(map, [&path] (auto &pair){ return pair.second == path; });
-
-		if(found == map.end())
+		if(found == set.end())
 			throw fs::filesystem_error("File not found.", std::make_error_code(std::errc::no_such_file_or_directory));
 
-		return found->first;
+		return found->name();
 	}
 
 	auto jsonGet(crow::json::rvalue const &json, string const &field) {
@@ -62,8 +54,8 @@ namespace {
 
 Server::Server() noexcept {
 	app_.loglevel(crow::LogLevel::DEBUG);
-	CROW_ROUTE(app_, "/")([this]() { return this->listResources(); });
-	CROW_ROUTE(app_, "/serie/<string>")([this](string const &dir) { return this->listDir(dir); });
+	CROW_ROUTE(app_, "/")([this]() { return this->listCollections(); });
+	CROW_ROUTE(app_, "/serie/<string>")([this](string const &collection) { return this->listResources(collection); });
 	CROW_ROUTE(app_, "/player").methods(crow::HTTPMethod::GET)([this]() { return this->getPlayerStatus(); });
 	CROW_ROUTE(app_, "/player").methods(crow::HTTPMethod::POST)([this](crow::request const &req) { return this->dispatchPlayerAction(req); });
 	CROW_WEBSOCKET_ROUTE(app_, "/player_update").onopen(
@@ -103,7 +95,11 @@ void Server::run(vector<string> const &args) {
 
 	auto resourcesList = jsonGet(config, "resources");
 	for(auto const &res : resourcesList) {
-		resources_.emplace(res["name"].s(), fs::canonical(fs::path(res["path"].s())));
+		string name = res["name"].s();
+		fs::path path = fs::canonical(fs::path(res["path"].s()));
+		string translationRegex = res["translation regex"].s();
+		string translationPattern = res["translation pattern"].s();
+		resources_.emplace(name, path, translationRegex, translationPattern);
 		CROW_LOG_INFO << "Resource dir at [" << res["path"].s() << "].";
 	}
 	player_ = getPlayerByName(jsonGet(config,"video player").s());
@@ -122,32 +118,28 @@ VideoPlayer *Server::getPlayerByName(string const &player) {
 	}
 }
 
-crow::response Server::listResources() const {
+crow::response Server::listCollections() const {
 	vector<crow::json::wvalue> list;
 	list.reserve(resources_.size());
 	std::ranges::transform(resources_, std::back_inserter(list), [](auto const &res) {
-		return res.first;	
+		return res.name();
 	});
 	return crow::json::wvalue(list);
 }
 
-crow::response Server::listDir(string const &dir) const {
-	try {
-		vector<string> dirList;
-		auto path = resources_.at(dir);
-		auto filter = std::ranges::views::filter(isValidVideoExtension);
+crow::response Server::listResources(string const &collection) const {
+	auto it = resources_.find(collection);
 
-		auto filteredDirs = fs::recursive_directory_iterator(path) | filter;
-		std::ranges::transform(filteredDirs, std::back_inserter(dirList), [](auto const &dir) { return dir.path().filename(); });
-		std::ranges::sort(dirList);
-
-		vector<crow::json::wvalue> response;
-		std::ranges::copy(dirList, std::back_inserter(response));
-		return crow::json::wvalue(response);
-	}
-	catch(std::out_of_range const &our) {
+	if(it == resources_.end())
 		return crow::response(crow::NOT_FOUND);
-	}
+
+	auto resources = it->getResources();
+
+	vector<crow::json::wvalue> response;
+	std::ranges::transform(resources, std::back_inserter(response), [](auto const &res) {
+		return res.second;
+	});
+	return crow::json::wvalue(response);
 }
 
 crow::response Server::getPlayerStatus() const {
@@ -213,34 +205,28 @@ crow::response Server::play(crow::json::rvalue const &body) const {
 		return crow::response(crow::BAD_REQUEST);
 	}
 
-	string resStr = body["serie"].s();
-	fs::path res;
+	string collection = body["serie"].s();
+
+	auto it = resources_.find(collection);
+	if(it == resources_.end()) {
+		CROW_LOG_ERROR << "Resource not found: " << collection;
+		return crow::response(crow::NOT_FOUND);
+	}
+
+	string resource = body["file"].s();
+	CROW_LOG_DEBUG << "Play request for file: " << resource; 
 
 	try {
-		res = resources_.at(resStr);
+		fs::path file = it->getFilePath(resource);
+		player_->play(file);
+		CROW_LOG_INFO << "Playing [" << file.string() << "].";
+		sendEvent_(body);
+		return crow::response(crow::OK);
 	}
-	catch(std::out_of_range const &our) {
-		CROW_LOG_ERROR << "Resource not found: " << resStr;
+	catch(fs::filesystem_error const &err) {
+		CROW_LOG_ERROR << err.what();
 		return crow::response(crow::NOT_FOUND);
 	}
-
-	string fileStr = body["file"].s();
-	auto dirRange = fs::recursive_directory_iterator(res);
-	CROW_LOG_DEBUG << "Play request for file: " << fileStr; 
-	auto itFile = std::ranges::find_if(dirRange, [fileStr](auto const &dirEntry) {
-		CROW_LOG_DEBUG << dirEntry.path(); 
-		return dirEntry.path().filename() == fileStr;
-	});
-
-	if(itFile == fs::end(dirRange))
-		return crow::response(crow::NOT_FOUND);
-
-	CROW_LOG_INFO << "Playing [" << itFile->path().string() << "].";
-	player_->play(itFile->path());
-
-	sendEvent_(body);
-
-	return crow::response(crow::OK);
 }
 
 crow::response Server::resume() const {
