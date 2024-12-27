@@ -53,6 +53,14 @@ void MPVVideoPlayer::go(int value, TimePosType type) {
 	mpv_command_string(mpv, command.c_str());
 }
 
+void MPVVideoPlayer::selectAudioTrack(std::size_t const &track) {
+	mpv_command_string(mpv, std::format("set aid {}", track).c_str());
+}
+
+void MPVVideoPlayer::selectSubtitlesTrack(std::size_t const &track) {
+	mpv_command_string(mpv, std::format("set sid {}", track).c_str());
+}
+
 PlayerStatus MPVVideoPlayer::status() const {
 	int bIdle;
 	int bPaused;
@@ -85,36 +93,37 @@ std::chrono::seconds MPVVideoPlayer::duration() const {
 }
 
 namespace {
-	webvplayer::VideoPlayer::TrackList getTracks(mpv_handle *mpv, string targetType) {
+	template<VideoPlayer::TrackType T>
+	VideoPlayer::TrackList<T> getTracks(mpv_handle *mpv, string targetType) {
 		int64_t nTracks;
 		mpv_get_property(mpv, "track-list/count", MPV_FORMAT_INT64, &nTracks);
 
-		vector<string> list;
-		std::optional<std::size_t> selected;
+		webvplayer::VideoPlayer::TrackList<T> list;
 
 		for(int64_t i=0; i < nTracks; ++i) {
 			char const *type = mpv_get_property_string(mpv, std::format("track-list/{}/type", i).c_str());
 			if(string(type) == targetType) {
 				char const *trackTitle = mpv_get_property_string(mpv, std::format("track-list/{}/title", i).c_str());
-				if(trackTitle != nullptr)
-					list.push_back(trackTitle);
+				int64_t id;
+				mpv_get_property(mpv, std::format("track-list/{}/id", i).c_str(), MPV_FORMAT_INT64, &id);
+				list.emplace_back(trackTitle==nullptr? "default" : trackTitle, id, false);
 
 				int bSelected;
 				mpv_get_property(mpv, std::format("track-list/{}/selected", i).c_str(), MPV_FORMAT_FLAG, &bSelected);
 				if(bSelected)
-				    selected = i;
+				    list.back().bSelected = true;
 			}
 		}
 
-		return std::make_tuple(selected, list);
+		return list;
 	}
 }
 
-VideoPlayer::TrackList MPVVideoPlayer::getAudioTracks() const {
-    return getTracks(mpv, "audio");
+VideoPlayer::TrackList<VideoPlayer::TrackType::AUDIO> MPVVideoPlayer::getAudioTracks() const {
+    return getTracks<VideoPlayer::TrackType::AUDIO>(mpv, "audio");
 }
 
-VideoPlayer::TrackList MPVVideoPlayer::getSubtitlesTracks() const {
-    return getTracks(mpv, "sub");
+VideoPlayer::TrackList<VideoPlayer::TrackType::SUBTITLES> MPVVideoPlayer::getSubtitlesTracks() const {
+    return getTracks<VideoPlayer::TrackType::SUBTITLES>(mpv, "sub");
 }
 
