@@ -1,5 +1,6 @@
 #include "webvplayer/webvplayer.hpp"
 #include "crow/app.h"
+#include "crow/http_response.h"
 #include "crow/json.h"
 #include "crow/logging.h"
 #include "crow/websocket.h"
@@ -9,7 +10,6 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
-#include <ranges>
 #include <string>
 #include <unordered_set>
 
@@ -41,14 +41,33 @@ namespace {
 		}
 	}
 
-	void trackListToJson(crow::json::wvalue &dst, VideoPlayer::TrackList const &src) {
-		auto [selected, tracks] = src;
-		if(selected.has_value())
-			dst["selected"] = selected.value();
-		else
-			dst["selected"] = nullptr;
+	template<VideoPlayer::TrackType T>
+	void trackListToJson(crow::json::wvalue &dst, VideoPlayer::TrackList<T> const &src) {
 
-		dst["tracks"] = tracks;
+		vector<crow::json::wvalue> list;
+		for(auto const &track : src) {
+			list.push_back({
+				{"title", track.title},
+				{"id", track.id},
+				{"selected", track.bSelected}
+			});
+		}
+		dst = static_cast<crow::json::wvalue>(list);
+	}
+
+	template<VideoPlayer::TrackType T>
+	crow::response selectTrack(VideoPlayer *player, crow::json::rvalue const &body) {
+		if(!body.has("track")) {
+			CROW_LOG_ERROR << "Missing parameter: \"track\".";
+			return crow::response(crow::BAD_REQUEST);
+		}
+
+		if constexpr(T == VideoPlayer::TrackType::AUDIO)
+			player->selectAudioTrack(body["track"].i());
+		else if constexpr(T == VideoPlayer::TrackType::SUBTITLES)
+			player->selectSubtitlesTrack(body["track"].i());
+
+		return crow::response(crow::OK);
 	}
 }
 
@@ -193,6 +212,10 @@ crow::response Server::dispatchPlayerAction(crow::request const &req) const {
 			return stop();
 		case VideoPlayerAction::GOTO:
 			return setTime(body);
+		case VideoPlayerAction::SELETC_AUDIO_TRACK:
+			return selectAudioTrack(body);
+		case VideoPlayerAction::SELECT_SUBTITLES_TRACK:
+			return selectSubtitlesTrack(body);
 		case VideoPlayerAction::UNKNOWN:
 		default:
 			CROW_LOG_ERROR << "Unknown action: \"" << actionStr << "\".";
@@ -221,7 +244,10 @@ crow::response Server::play(crow::json::rvalue const &body) const {
 		fs::path file = it->getFilePath(resource);
 		player_->play(file);
 		CROW_LOG_INFO << "Playing [" << file.string() << "].";
-		sendEvent_(body);
+		crow::json::wvalue event(body);
+		trackListToJson(event["audio-tracks"], player_->getAudioTracks());
+		trackListToJson(event["subs-tracks"], player_->getSubtitlesTracks());
+		sendEvent_(event);
 		return crow::response(crow::OK);
 	}
 	catch(fs::filesystem_error const &err) {
@@ -284,6 +310,14 @@ crow::response Server::setTime(crow::json::rvalue const &body) const {
 	sendEvent_(event);
 
 	return crow::response(crow::OK);
+}
+
+crow::response Server::selectAudioTrack(crow::json::rvalue const &body) const {
+	return selectTrack<VideoPlayer::TrackType::AUDIO>(player_, body);
+}
+
+crow::response Server::selectSubtitlesTrack(crow::json::rvalue const &body) const {
+	return selectTrack<VideoPlayer::TrackType::SUBTITLES>(player_, body);
 }
 
 void Server::addConnection(crow::websocket::connection &conn) {

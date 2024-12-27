@@ -2,7 +2,6 @@
 #define __WVP_VIDEO_PLAYER_HPP__
 #include <chrono>
 #include <filesystem>
-#include <optional>
 
 namespace webvplayer {
 	namespace fs = std::filesystem;
@@ -22,6 +21,21 @@ namespace webvplayer {
 			PAUSED,
 		};
 
+		enum class TrackType {
+			AUDIO,
+			SUBTITLES,
+		};
+
+		template<TrackType T>
+		struct Track {
+			std::string title;
+			std::size_t id;
+			bool bSelected;
+		};
+
+		template<TrackType T>
+		using TrackList = std::vector<Track<T> >;
+
 		static constexpr TimePosType timePosType(std::string_view const tpt) noexcept {
 			if(tpt == "relative")
 				return TimePosType::RELATIVE;
@@ -38,14 +52,15 @@ namespace webvplayer {
 		virtual void pause() = 0;
 		virtual void resume() = 0;
 		virtual void go(int value, TimePosType type = TimePosType::RELATIVE) = 0;
+		virtual void selectAudioTrack(std::size_t const &track) = 0;
+		virtual void selectSubtitlesTrack(std::size_t const &track) = 0;
 
 		virtual Status status() const = 0;
 		virtual fs::path file() const = 0;
 		virtual std::chrono::seconds currentTime() const = 0;
 		virtual std::chrono::seconds duration() const = 0;
-		using TrackList = std::tuple<std::optional<std::size_t>, std::vector<std::string> >;
-		virtual TrackList getAudioTracks() const = 0;
-		virtual TrackList getSubtitlesTracks() const = 0;
+		virtual TrackList <TrackType::AUDIO> getAudioTracks() const = 0;
+		virtual TrackList <TrackType::SUBTITLES> getSubtitlesTracks() const = 0;
 		virtual ~VideoPlayer() {}
 	};
 }

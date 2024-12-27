@@ -26,14 +26,15 @@ namespace webvplayer {
 		void pause() override;
 		void resume() override;
 		void go(int value, TimePosType type = TimePosType::RELATIVE) override;
+		void selectAudioTrack(std::size_t const &track) override;
+		void selectSubtitlesTrack(std::size_t const &track) override;
 
 		Status status() const override;
 		fs::path file() const override;
 		std::chrono::seconds currentTime() const override;
 		std::chrono::seconds duration() const override;
-		TrackList getAudioTracks() const override;
-		TrackList getSubtitlesTracks() const override;
-
+		TrackList <TrackType::AUDIO> getAudioTracks() const override;
+		TrackList <TrackType::SUBTITLES> getSubtitlesTracks() const override;
 	};
 
 } // namespace webvplayer

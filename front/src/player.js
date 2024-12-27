@@ -63,8 +63,25 @@ function processSocketEvent(eventData, setState) {
 	});
 }
 
+function selectAudioTrack(track) {
+	const json = {action: 'select-audio-track', track: track==''? null : track};
+	fetch('http://webvplayer:8008/player', {method: 'POST', body: JSON.stringify(json)});
+}
+
+function selectSubtitleTrack(track) {
+	const json = {action: 'select-subs-track', track: track==''? null : track};
+	fetch('http://webvplayer:8008/player', {method: 'POST', body: JSON.stringify(json)});
+}
+
 const ImgButton = ({img, onClick}) => <button onClick={onClick}><img src={img} /></button>;
 const HideableImgButton = ({img, onClick, bHidden}) => <button className={bHidden? 'Hidden' : 'Visible'} onClick={onClick}><img src={img} /></button>;
+const TrackSelector = ({title, tracks, onChange}) => <div>
+	<label>{title}</label>
+	<select onChange={onChange}>
+		<option value=''>None</option>
+		{tracks.map((track, index) => <option key={index} value={track.id}>{track.title}</option>)}
+	</select>
+</div>;
 
 export const Player = ({serie, chapter}) => {
 	const [state, setState] = useState({serie: null, file: null});
@@ -94,6 +111,20 @@ export const Player = ({serie, chapter}) => {
 		</div>
 		<ImgButton img={ffIcon} onClick={() => ffrw(5)} />
 	    </div>
+		{!state.hasOwnProperty('audio-tracks')? <></> : 
+			<TrackSelector 
+				title='Audio' 
+				tracks={state['audio-tracks']}
+				onChange={(event) => {selectAudioTrack(event.target.value)}}
+			/>
+		}
+		{!state.hasOwnProperty('subs-tracks')? <></> : 
+			<TrackSelector 
+				title='Subtitles' 
+				tracks={state['subs-tracks']}
+				onChange={(event) => {selectSubtitleTrack(event.target.value)}}
+			/>
+		}
 	</div>
 }
 
