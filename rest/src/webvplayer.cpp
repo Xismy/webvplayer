@@ -58,6 +58,7 @@ Server::Server() noexcept {
 	CROW_ROUTE(app_, "/serie/<string>")([this](string const &collection) { return this->listResources(collection); });
 	CROW_ROUTE(app_, "/player").methods(crow::HTTPMethod::GET)([this]() { return this->getPlayerStatus(); });
 	CROW_ROUTE(app_, "/player").methods(crow::HTTPMethod::POST)([this](crow::request const &req) { return this->dispatchPlayerAction(req); });
+	CROW_ROUTE(app_, "/poweroff").methods(crow::HTTPMethod::POST)([]() {system("poweroff"); return crow::response(crow::OK); });
 	CROW_WEBSOCKET_ROUTE(app_, "/player_update").onopen(
 		[this](crow::websocket::connection & conn) { this->addConnection(conn); }
 	).onclose(
