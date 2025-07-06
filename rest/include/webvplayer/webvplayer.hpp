@@ -22,6 +22,7 @@ namespace webvplayer {
 
 		enum class VideoPlayerAction {
 			UNKNOWN,
+			LOAD,
 			PLAY,
 			STOP,
 			PAUSE,
@@ -33,6 +34,7 @@ namespace webvplayer {
 
 		using VideoPlayerActionR = EnumClassReflection<VideoPlayerAction, 
 			 "unknown",
+			 "load",
 			 "play",
 			 "stop",
 			 "pause",
@@ -45,7 +47,8 @@ namespace webvplayer {
 	private:
 		crow::App<crow::CORSHandler> app_;
 		std::unordered_set<crow::websocket::connection*> conns_;
-		std::unordered_set<ResourceCollection> resources_;
+		ResourceTree resources_;
+		std::optional<std::filesystem::path> loadedResource_;
 		VideoPlayer *player_ = nullptr;
 
 		void sendEvent_(crow::json::wvalue const &json) const;
@@ -57,14 +60,13 @@ namespace webvplayer {
 		Server(Server &&other) = delete;
 		Server &operator=(Server &&other) = delete;
 		void run(std::vector<std::string> const &args);
-		crow::response listCollections() const;
-		crow::response listResources(std::string const &collection) const;
+		crow::response listResources(std::filesystem::path resource) const;
 		crow::response getPlayerStatus() const;
-		crow::response dispatchPlayerAction(crow::request const &req) const;
-		crow::response play(crow::json::rvalue const &req) const;
+		crow::response dispatchPlayerAction(crow::request const &req);
+		crow::response load(crow::json::rvalue const &body, bool bPlay = false);
 		crow::response resume() const;
 		crow::response pause() const;
-		crow::response stop() const;
+		crow::response stop();
 		crow::response setTime(crow::json::rvalue const &body) const;
 		crow::response selectAudioTrack(crow::json::rvalue const &body) const;
 		crow::response selectSubtitlesTrack(crow::json::rvalue const &body) const;

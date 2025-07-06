@@ -47,6 +47,7 @@ namespace webvplayer {
 			return TimePosType::UNKNOWN;
 		}
 
+		virtual void load(fs::path const &file, bool bPlay = false) = 0;
 		virtual void play(fs::path const &file) = 0;
 		virtual void stop() = 0;
 		virtual void pause() = 0;
