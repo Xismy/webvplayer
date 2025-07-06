@@ -1,10 +1,21 @@
 {
 	"resources":[
 		{
-			"name":"Collection",
-			"path":"/home/user/collecction/collection1",
-			"translation regex": "(CollectionName)discarded text([0-9]+).*\\.mp4",
-			"translation pattern": "{1} {2}"
+			"name": "Collection1",
+			"resources":[
+				{
+					"name":"SubCollection1",
+					"path":"/path/to/fs/dir"
+				},
+				{
+					"name":"SubCollection2",
+					"path":"/path/to/another/dir"
+				}
+			]
+		},
+		{
+			"name":"Collection2",
+			"path":"/path/to/another/one"
 		}
 	],
 	"front host":"webvplayer",

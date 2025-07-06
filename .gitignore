@@ -1,5 +1,4 @@
 build/
 .cache/
-/front/.parcel-cache/
 /front/node_modules/
 /front/dist/

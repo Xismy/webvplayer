@@ -21,6 +21,7 @@ namespace webvplayer {
 		MPVVideoPlayer();
 		~MPVVideoPlayer();
 
+		void load(fs::path const &file, bool bPlay = false) override;
 		void play(fs::path const &file) override;
 		void stop() override;
 		void pause() override;

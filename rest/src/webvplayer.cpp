@@ -4,12 +4,13 @@
 #include "crow/json.h"
 #include "crow/logging.h"
 #include "crow/websocket.h"
+#include "webvplayer/name_format.hpp"
 #include "webvplayer/resource.hpp"
 #include "webvplayer/video_player.hpp"
 #include "webvplayer/mpv_video_player.hpp"
-#include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <string>
 #include <unordered_set>
 
@@ -17,22 +18,17 @@
 
 using webvplayer::Server;
 using webvplayer::VideoPlayer;
+using webvplayer::Resource;
+using webvplayer::ResourceTree;
+using NameFormatter = webvplayer::name_format::Formatter;
 using std::vector;
 using std::string;
 using std::ifstream;
 namespace fs = std::filesystem;
+namespace json = crow::json;
 
 namespace {
-	string pathReverseLookup(std::unordered_set<webvplayer::ResourceCollection> const &set, fs::path const &path) {
-		auto found = std::ranges::find_if(set, [&path] (auto &entry){ return entry.path() == path; });
-
-		if(found == set.end())
-			throw fs::filesystem_error("File not found.", std::make_error_code(std::errc::no_such_file_or_directory));
-
-		return found->name();
-	}
-
-	auto jsonGet(crow::json::rvalue const &json, string const &field) {
+	auto jsonGet(json::rvalue const &json, string const &field) {
 		try {
 			return json[field];
 		}
@@ -42,9 +38,9 @@ namespace {
 	}
 
 	template<VideoPlayer::TrackType T>
-	void trackListToJson(crow::json::wvalue &dst, VideoPlayer::TrackList<T> const &src) {
+	void trackListToJson(json::wvalue &dst, VideoPlayer::TrackList<T> const &src) {
 
-		vector<crow::json::wvalue> list;
+		vector<json::wvalue> list;
 		for(auto const &track : src) {
 			list.push_back({
 				{"title", track.title},
@@ -52,7 +48,27 @@ namespace {
 				{"selected", track.bSelected}
 			});
 		}
-		dst = static_cast<crow::json::wvalue>(list);
+		dst = static_cast<json::wvalue>(list);
+	}
+
+	void loadResources(ResourceTree &resources, ResourceTree::Node const &parent, json::rvalue const &json) {
+		for(auto const &res : json) {
+			string name = res["name"].s();
+	
+			if(!res.has("path")) {
+				if(!res.has("resources"))
+					throw webvplayer::MissingRequiredConfigParamException("path (whithin resources block)");
+				
+				auto const & child = resources.add(parent, Resource(name));
+				loadResources(resources, child, res["resources"]);
+				continue;
+			}
+
+			fs::path path = fs::canonical(fs::path(res["path"].s()));
+			resources.add(parent, Resource(name, path));
+	
+			CROW_LOG_INFO << "Resource dir at [" << path.string() << "].";
+		}
 	}
 
 	template<VideoPlayer::TrackType T>
@@ -73,15 +89,16 @@ namespace {
 
 Server::Server() noexcept {
 	app_.loglevel(crow::LogLevel::DEBUG);
-	CROW_ROUTE(app_, "/")([this]() { return this->listCollections(); });
-	CROW_ROUTE(app_, "/serie/<string>")([this](string const &collection) { return this->listResources(collection); });
+	CROW_ROUTE(app_, "/")([this]() { return this->listResources(""); });
+	CROW_ROUTE(app_, "/list/")([this]() { return this->listResources(""); });
+	CROW_ROUTE(app_, "/list/<path>")([this](fs::path const &resource) { return this->listResources(resource); });
 	CROW_ROUTE(app_, "/player").methods(crow::HTTPMethod::GET)([this]() { return this->getPlayerStatus(); });
 	CROW_ROUTE(app_, "/player").methods(crow::HTTPMethod::POST)([this](crow::request const &req) { return this->dispatchPlayerAction(req); });
 	CROW_ROUTE(app_, "/poweroff").methods(crow::HTTPMethod::POST)([]() {system("poweroff"); return crow::response(crow::OK); });
 	CROW_WEBSOCKET_ROUTE(app_, "/player_update").onopen(
 		[this](crow::websocket::connection & conn) { this->addConnection(conn); }
 	).onclose(
-		[this](crow::websocket::connection & conn, std::string const &) { this->removeConnection(conn); }
+		[this](crow::websocket::connection & conn, std::string const &, unsigned short) { this->removeConnection(conn); }
 	);
 }
 
@@ -114,14 +131,7 @@ void Server::run(vector<string> const &args) {
 	cors.global().origin(std::format("http://{}:{}", frontHost, frontPort));
 
 	auto resourcesList = jsonGet(config, "resources");
-	for(auto const &res : resourcesList) {
-		string name = res["name"].s();
-		fs::path path = fs::canonical(fs::path(res["path"].s()));
-		string translationRegex = res["translation regex"].s();
-		string translationPattern = res["translation pattern"].s();
-		resources_.emplace(name, path, translationRegex, translationPattern);
-		CROW_LOG_INFO << "Resource dir at [" << res["path"].s() << "].";
-	}
+	loadResources(resources_, resources_.root(), resourcesList);
 	player_ = getPlayerByName(jsonGet(config,"video player").s());
 	app_.port(jsonGet(config, "api port").i()).run();
 }
@@ -138,28 +148,24 @@ VideoPlayer *Server::getPlayerByName(string const &player) {
 	}
 }
 
-crow::response Server::listCollections() const {
-	vector<crow::json::wvalue> list;
-	list.reserve(resources_.size());
-	std::ranges::transform(resources_, std::back_inserter(list), [](auto const &res) {
-		return res.name();
-	});
-	return crow::json::wvalue(list);
-}
+crow::response Server::listResources(fs::path resource) const {
+	try {
+		CROW_LOG_DEBUG << "Listing resources at [" << resource.string() << "].";
+		crow::json::wvalue response(std::vector<crow::json::wvalue>{});
+		
+		for(ResourceTree::Node const &child : resources_.list(resource)) {
+			response[response.size()] = crow::json::wvalue {
+				{"name", child.name()},
+				{"mime", child.mime()}
+			};
+		}
 
-crow::response Server::listResources(string const &collection) const {
-	auto it = resources_.find(collection);
-
-	if(it == resources_.end())
+		return response;
+	}
+	catch(fs::filesystem_error const &err) {
+		CROW_LOG_ERROR << err.what();
 		return crow::response(crow::NOT_FOUND);
-
-	auto resources = it->getResources();
-
-	vector<crow::json::wvalue> response;
-	std::ranges::transform(resources, std::back_inserter(response), [](auto const &res) {
-		return res.second;
-	});
-	return crow::json::wvalue(response);
+	}
 }
 
 crow::response Server::getPlayerStatus() const {
@@ -167,32 +173,19 @@ crow::response Server::getPlayerStatus() const {
 		{"status", static_cast<int>(player_->status())},
 		{"time-pos", player_->currentTime().count()},
 		{"length", player_->duration().count()},
-		{"serie", nullptr},
-		{"file", nullptr}
+		{"uri", nullptr},
 	};
 
-	fs::path file = player_->file();
-
-	if(file.empty())
-		return status;
-
-	try{
-		std::string name = file.filename();
-		fs::path dir = file.parent_path();
-		status["serie"] = pathReverseLookup(resources_, dir);
-		status["file"] = name;
+	if(loadedResource_.has_value()) {
+		status["uri"] = loadedResource_->string();
+		trackListToJson(status["audio-tracks"], player_->getAudioTracks());
+		trackListToJson(status["subs-tracks"], player_->getSubtitlesTracks());
 	}
-	catch(fs::filesystem_error const &err) {
-		CROW_LOG_ERROR << err.what();
-	}
-
-	trackListToJson(status["audio-tracks"], player_->getAudioTracks());
-	trackListToJson(status["subs-tracks"], player_->getSubtitlesTracks());
 
 	return status;
 }
 
-crow::response Server::dispatchPlayerAction(crow::request const &req) const {
+crow::response Server::dispatchPlayerAction(crow::request const &req) {
 	auto body = crow::json::load(req.body);
 	
 	if(!body.has("action")) {
@@ -202,8 +195,10 @@ crow::response Server::dispatchPlayerAction(crow::request const &req) const {
 	
 	string actionStr = body["action"].s();
 	switch(VideoPlayerActionR(actionStr)) {
+		case VideoPlayerAction::LOAD:
+			return load(body);
 		case VideoPlayerAction::PLAY:
-			return play(body);
+			return load(body, true);
 		case VideoPlayerAction::RESUME:
 			return resume();
 		case VideoPlayerAction::PAUSE:
@@ -223,35 +218,30 @@ crow::response Server::dispatchPlayerAction(crow::request const &req) const {
 	}
 }
 
-crow::response Server::play(crow::json::rvalue const &body) const {
-	if(!body.has("serie") || !body.has("file")) {
-		CROW_LOG_ERROR << "Missing parameter: \"serie\" or \"file\".";
+crow::response Server::load(crow::json::rvalue const &body, bool bPlay) {
+	if(!body.has("uri")) {
+		CROW_LOG_ERROR << "Missing parameter: \"uri\".";
 		return crow::response(crow::BAD_REQUEST);
 	}
 
-	string collection = body["serie"].s();
-
-	auto it = resources_.find(collection);
-	if(it == resources_.end()) {
-		CROW_LOG_ERROR << "Resource not found: " << collection;
-		return crow::response(crow::NOT_FOUND);
-	}
-
-	string resource = body["file"].s();
-	CROW_LOG_DEBUG << "Play request for file: " << resource; 
+	fs::path uri(body["uri"].s());
+	CROW_LOG_DEBUG << "Play request for : " << uri.string(); 
 
 	try {
-		fs::path file = it->getFilePath(resource);
-		player_->play(file);
-		CROW_LOG_INFO << "Playing [" << file.string() << "].";
+		auto const &resource = resources_.find(uri);
+		loadedResource_ = uri;
+		player_->load(resource, bPlay);
 		crow::json::wvalue event(body);
 		trackListToJson(event["audio-tracks"], player_->getAudioTracks());
 		trackListToJson(event["subs-tracks"], player_->getSubtitlesTracks());
 		sendEvent_(event);
+
+		CROW_LOG_INFO << "Playing [" << resource.string() << "].";
+
 		return crow::response(crow::OK);
 	}
 	catch(fs::filesystem_error const &err) {
-		CROW_LOG_ERROR << err.what();
+		CROW_LOG_ERROR << "Resource not found: " << uri.string();
 		return crow::response(crow::NOT_FOUND);
 	}
 }
@@ -279,8 +269,9 @@ crow::response Server::pause() const {
 	return crow::response(crow::OK);
 }
 
-crow::response Server::stop() const {
+crow::response Server::stop() {
 	player_->stop();
+	loadedResource_.reset();
 	
 	crow::json::wvalue event {
 		{"action", VideoPlayerActionR(VideoPlayerAction::STOP).str()}

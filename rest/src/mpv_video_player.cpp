@@ -24,10 +24,13 @@ MPVVideoPlayer::~MPVVideoPlayer() {
 	mpv_terminate_destroy(mpv);
 }
 
-void MPVVideoPlayer::play(fs::path const &file) {
-	const char *cmd[] = {"loadfile", file.c_str(), nullptr};
+void MPVVideoPlayer::load(fs::path const &file, bool bPlay) {
+	const char *cmd[] = {"loadfile", file.c_str(), "replace", "0", bPlay? "fullscreen=yes,pause=no" : "fullscreen=yes,pause=yes", nullptr};
 	mpv_command_async(mpv, 0, cmd);
-	mpv_command_string(mpv, "set fullscreen yes");
+}
+
+void MPVVideoPlayer::play(fs::path const &file) {
+	load(file, true);
 }
 
 void MPVVideoPlayer::stop() {
