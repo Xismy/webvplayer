@@ -56,35 +56,37 @@ const Player = () => {
 	});
 
 	return (
-		<Show
-			when={state().uri !== null}
-			fallback={<></>}
-		>
-			<h1>{state().uri}</h1>
-			<div class='player'>
-				<button onClick={() => sendAction('goto', {value: -10})}>RW 10s</button>
-				<button onClick={() => sendAction('goto', {value: -5})}>RW 5s</button>
-				<div>
-					<Show 
-						when={state().state === 'playing'}
-						fallback={<button onClick={() => sendAction('resume')}><PlaySvg /></button>}
-					>	
-						<button onClick={() => sendAction('pause')}><PauseSvg /></button>
-					</Show>
-					<button onClick={() => sendAction('stop')}><StopSvg /></button>
+		<div class='player'>
+			<Show
+				when={state().uri !== null}
+				fallback={<></>}
+			>
+				<h1>{state().uri}</h1>
+				<div class='button-box'>
+					<button onClick={() => sendAction('goto', {value: -10})}>RW 10s</button>
+					<button onClick={() => sendAction('goto', {value: -5})}>RW 5s</button>
+					<div class='button-col'>
+						<Show 
+							when={state().state === 'playing'}
+							fallback={<button onClick={() => sendAction('resume')}><PlaySvg /></button>}
+						>	
+							<button onClick={() => sendAction('pause')}><PauseSvg /></button>
+						</Show>
+						<button onClick={() => sendAction('stop')}><StopSvg /></button>
+					</div>
+					<button onClick={() => sendAction('goto', {value: 5})}>FF 5s</button>
+					<button onClick={() => sendAction('goto', {value: 10})}>FF 10s</button>
 				</div>
-				<button onClick={() => sendAction('goto', {value: 5})}>FF 5s</button>
-				<button onClick={() => sendAction('goto', {value: 10})}>FF 10s</button>
-			</div>
-			<div>
-				<label>Volume</label>
-				<input type='range'/>
-			</div>
-			<div>
-				<label>Audio</label>
-				<label>Subtitles</label>
-			</div>
-		</Show>
+				<div>
+					<label>Volume</label>
+					<input type='range'/>
+				</div>
+				<div>
+					<label>Audio</label>
+					<label>Subtitles</label>
+				</div>
+			</Show>
+		</div>
 	);
 }
 
