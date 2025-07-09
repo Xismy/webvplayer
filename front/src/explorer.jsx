@@ -15,7 +15,7 @@ function load(uri, bPlay) {
 const Resource = ({resource, uri, setUri}) => {
 	const subdir = uri() === ''? resource.name : uri() + '/' + resource.name;
 	return (
-		<div>
+		<div class='resource'>
 			<label>{resource.name}</label>
 			<Show
 				when={resource.mime !== 'application/directory'}
@@ -43,7 +43,7 @@ const Explorer = () => {
 	});
 
 	return (
-	<>
+	<div class='explorer'>
 		<h1>
 			<Show
 				when={uri() !== ''}
@@ -53,8 +53,10 @@ const Explorer = () => {
 			</Show>
 			<Uri uri={uri}/>
 		</h1>
-		<For each={resources()}>{resource => <Resource resource={resource} uri={uri} setUri={setUri} />}</For>
-	</>);
+		<div class='list'>
+			<For each={resources()}>{resource => <Resource resource={resource} uri={uri} setUri={setUri} />}</For>
+		</div>
+	</div>);
 }
 
 export {Explorer};
