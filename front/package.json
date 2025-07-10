@@ -1,19 +1,22 @@
 {
-  "name": "solidjs",
-  "version": "1.0.0",
+  "name": "webvplayer",
+  "version": "0.0.1",
   "main": "index.js",
   "scripts": {
-    "build": "babel src --out-dir dist --extensions .jsx"
+    "compile": "babel src/* --out-dir dist --extensions .jsx && node scripts/gen_icons.js",
+    "copy": "cpy src/*.css src/index.html dist --flat",
+    "build": "npm run compile && npm run copy"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "description": "",
-  "dependencies": {
+  "devDependencies": {
     "@babel/cli": "^7.26.4",
     "@babel/core": "^7.26.0",
     "babel-preset-solid": "^1.9.3",
-    "solid-js": "^1.9.4"
+    "solid-js": "^1.9.4",
+    "cpy-cli": "^5.0.0"
   }
 }
