@@ -1,5 +1,5 @@
 import { createSignal, createEffect } from 'solid-js';
-import { PlaySimpleSvg } from './icons.js'
+import { PlaySvg } from './icons.js'
 
 function load(uri, bPlay) {
 	fetch('http://webvplayer:8008/player', {
@@ -22,7 +22,7 @@ const Resource = ({resource, uri, setUri}) => {
 				fallback=<button onClick={() => setUri(subdir)}>Go</button>
 			>
 				<button onClick={() => load(subdir, false)}>Load</button>
-				<button onClick={() => load(subdir, true)}><PlaySimpleSvg /></button>
+				<button onClick={() => load(subdir, true)}><PlaySvg /></button>
 			</Show>
 		</div>
 	);
