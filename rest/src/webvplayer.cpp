@@ -13,6 +13,7 @@
 #include <optional>
 #include <string>
 #include <unordered_set>
+#include <ranges>
 
 #include "webvplayer/webplayer_exceptions.hpp"
 
@@ -85,6 +86,30 @@ namespace {
 
 		return crow::response(crow::OK);
 	}
+
+	string toResourceName(string const &uri) {
+		if(uri.size() == 0)
+			return uri;
+
+		auto splitted = uri | std::views::split('%');
+		string resourceName;
+		resourceName.reserve(uri.size());
+		bool escaped = uri[0] == '%';
+		for(auto token : splitted) {
+			if(escaped && token.size() >= 2) {
+				char byteStr[3] = {*(token.begin()), *(token.begin() + 1), 0};
+				char byte = std::strtol(byteStr, nullptr, 16);
+				resourceName.push_back(byte);
+				resourceName.append(token.begin() + 2, token.end());
+			}
+			else {
+				resourceName.append(token.begin(), token.end());
+				escaped = true;
+			}
+		}
+
+		return resourceName;
+	}
 }
 
 Server::Server() noexcept {
@@ -152,6 +177,8 @@ crow::response Server::listResources(fs::path resource) const {
 	try {
 		CROW_LOG_DEBUG << "Listing resources at [" << resource.string() << "].";
 		crow::json::wvalue response(std::vector<crow::json::wvalue>{});
+
+		resource = fs::path(toResourceName(resource.string()));
 		
 		for(ResourceTree::Node const &child : resources_.list(resource)) {
 			response[response.size()] = crow::json::wvalue {
