@@ -1,5 +1,5 @@
 import {createSignal, createEffect} from 'solid-js';
-import {PlaySvg, PauseSvg, StopSvg} from './icons.js'
+import {PlaySvg, PauseSvg, StopSvg, FfSvg, NextSvg} from './icons.js'
 
 const HostUrl = 'webvplayer:8008';
 const PlayerEndpoint = 'http://' + HostUrl + '/player';
@@ -40,6 +40,12 @@ function sendAction(action, params={}) {
 	});
 }
 
+const TimeSkipButton = ({time}) => {
+	return (
+		<button onClick={() => sendAction('goto', {value: time})}><div style={time < 0? 'scale: -1' : ''}><FfSvg /></div><label>{time}</label></button>
+	);
+}
+
 const Player = () => {
 	const [state, setState] = createSignal({uri: null});
 	
@@ -63,8 +69,11 @@ const Player = () => {
 			>
 				<h1>{state().uri}</h1>
 				<div class='button-box'>
-					<button onClick={() => sendAction('goto', {value: -10})}>RW 10s</button>
-					<button onClick={() => sendAction('goto', {value: -5})}>RW 5s</button>
+					<div class='button-col'>
+						<TimeSkipButton time={-60} />
+						<TimeSkipButton time={-15} />
+						<TimeSkipButton time={-3} />
+					</div>
 					<div class='button-col'>
 						<Show 
 							when={state().state === 'playing'}
@@ -74,8 +83,11 @@ const Player = () => {
 						</Show>
 						<button onClick={() => sendAction('stop')}><StopSvg /></button>
 					</div>
-					<button onClick={() => sendAction('goto', {value: 5})}>FF 5s</button>
-					<button onClick={() => sendAction('goto', {value: 10})}>FF 10s</button>
+					<div class='button-col'>
+						<TimeSkipButton time={60} />
+						<TimeSkipButton time={15} />
+						<TimeSkipButton time={3} />
+					</div>
 				</div>
 				<div>
 					<label>Volume</label>
