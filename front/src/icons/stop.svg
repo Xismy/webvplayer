@@ -2,26 +2,21 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="44.72633mm"
-   height="44.72633mm"
-   viewBox="0 0 44.72633 44.72633"
+   width="512"
+   height="512"
+   viewBox="0 0 512 512"
    version="1.1"
    id="svg1"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
   <defs
      id="defs1" />
-  <g
-     id="layer1"
-     transform="translate(66.862315,8.4718843)">
-    <rect
-       style="mix-blend-mode:normal;fill:#ff5555;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:2.4;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1"
-       id="rect160"
-       width="42.326332"
-       height="42.326332"
-       x="-65.662315"
-       y="-7.2718844"
-       rx="0"
-       ry="6.5676594" />
-  </g>
+  <rect
+     style="fill:#ff5555;stroke:#000000;stroke-width:24;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+     id="rect1"
+     width="463.58752"
+     height="463.58752"
+     x="24.206238"
+     y="24.206238"
+     ry="67.689949" />
 </svg>

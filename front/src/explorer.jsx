@@ -1,5 +1,5 @@
-import { createSignal, createEffect } from 'solid-js';
-import { PlaySvg } from './icons.js'
+import { createSignal, createEffect, createMemo } from 'solid-js';
+import { HomeSvg, PlaySvg } from './icons.js'
 
 function load(uri, bPlay) {
 	fetch('http://webvplayer:8008/player', {
@@ -14,22 +14,25 @@ function load(uri, bPlay) {
 
 const Resource = ({resource, uri, setUri}) => {
 	const subdir = uri() === ''? resource.name : uri() + '/' + resource.name;
+	const callback = resource.mime === 'application/directory' ? () => setUri(subdir) : undefined;
 	return (
-		<div class='resource'>
+		<div onClick={callback} class='resource'>
 			<label>{resource.name}</label>
 			<Show
 				when={resource.mime !== 'application/directory'}
-				fallback=<button onClick={() => setUri(subdir)}>Go</button>
 			>
-				<button onClick={() => load(subdir, false)}>Load</button>
-				<button onClick={() => load(subdir, true)}><PlaySvg /></button>
+				<button onClick={() => load(subdir, false)}><PlaySvg /></button>
 			</Show>
 		</div>
 	);
 }
 
-const Uri = ({uri}) => {
-	return <For each={uri().split('/')}>{subdir => <><label>{subdir}</label><label>&gt</label></>}</For>;
+const PathBar = ({uri, setUri}) => {
+	const uriParts = createMemo(() => uri().split('/').filter(s => s !== ''));
+	const goToDir = (n) => {setUri(uriParts().slice(0, n).join('/'))};
+	return <div class='path-bar'>
+		<label><button onClick={() => goToDir(0)}><HomeSvg /></button></label>
+		<For each={uriParts()}>{(subdir, i) => <><label onClick={() => goToDir(i()+1)}>{subdir}</label></>}</For></div>;
 }
 
 const Explorer = () => {
@@ -44,15 +47,12 @@ const Explorer = () => {
 
 	return (
 	<div class='explorer'>
-		<h1>
-			<Show
-				when={uri() !== ''}
-				fallback={<></>}
-			>
-				<button onClick={() => setUri(uri().split('/').slice(0, -1).join('/'))}>Back</button>
-			</Show>
-			<Uri uri={uri}/>
-		</h1>
+		<Show
+			when={uri() !== ''}
+			fallback={<></>}
+		>
+		</Show>
+		<PathBar uri={uri} setUri={setUri} />
 		<div class='list'>
 			<For each={resources()}>{resource => <Resource resource={resource} uri={uri} setUri={setUri} />}</For>
 		</div>

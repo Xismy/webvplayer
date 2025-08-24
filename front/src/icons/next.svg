@@ -2,35 +2,24 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="63.71743mm"
-   height="45.817375mm"
-   viewBox="0 0 63.71743 45.817375"
+   width="512"
+   height="512"
+   viewBox="0 0 512 512"
    version="1.1"
    id="svg1"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
   <defs
      id="defs1" />
-  <g
-     id="layer1"
-     transform="translate(82.33386,-179.87374)">
-    <g
-       id="g18"
-       transform="translate(9.457283,-0.03953461)"
-       style="stroke-width:2.4;stroke-dasharray:none">
-      <path
-         style="fill:#4b4b4b;fill-opacity:1;stroke:#000000;stroke-width:8.81812;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1"
-         id="path2-3-3"
-         d="m -97.675576,73.08247 c -5.502484,9.735145 -154.065014,11.094003 -159.744654,1.461138 -5.67964,-9.632865 67.42482,-138.971215 78.60695,-139.073495 11.18212,-0.10228 86.64019,127.877212 81.137704,137.612357 z"
-         transform="matrix(0.29478264,-0.10881019,0.17019283,0.18846477,-24.360119,178.14776)" />
-      <rect
-         style="fill:#4b4b4b;fill-opacity:1;stroke:#000000;stroke-width:2.4;stroke-dasharray:none;stroke-opacity:1"
-         id="rect11"
-         width="10.067796"
-         height="43.41737"
-         x="-39.341511"
-         y="181.11328"
-         ry="4.4046612" />
-    </g>
-  </g>
+  <path
+     d="M 101.58436,120.34988 C 74.933019,139.92375 76.01615,240.30788 75.768273,256 76.01615,271.69211 74.933019,372.07624 101.58436,391.65012 130.0017,391.26301 184.78849,368.7686 230.8327,344.26035 292.99406,311.17331 337.64672,266.15342 337.43473,256 337.64672,245.84657 292.99406,200.8267 230.8327,167.73965 184.78849,143.23139 130.0017,120.73698 101.58436,120.34988 Z"
+     style="fill:#ffeeaa;stroke:#000000;stroke-width:23.9999;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+     id="path1" />
+  <rect
+     style="fill:#ffeeaa;stroke:#000000;stroke-width:24;stroke-linecap:round;stroke-linejoin:round"
+     id="rect1"
+     width="73.062523"
+     height="273.48346"
+     x="363.16916"
+     y="119.25827" />
 </svg>

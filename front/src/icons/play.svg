@@ -2,21 +2,18 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="68.04734mm"
-   height="48.641991mm"
-   viewBox="0 0 68.04734 48.641991"
+   width="512"
+   height="512"
+   viewBox="0 0 512 512"
    version="1.1"
    id="svg1"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
   <defs
      id="defs1" />
-  <g
-     id="layer1"
-     transform="translate(88.756424,-54.11609)">
-    <path
-       style="baseline-shift:baseline;display:inline;overflow:visible;opacity:1;fill:#b6ffa5;stroke:#000000;stroke-width:2.4;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
-       d="m -21.909162,78.076251 c 0.0461,3.222367 -57.63888,24.967219 -62.02687,23.381559 -4.38798,-1.58566 -5.00046,-44.397113 -0.65858,-46.033823 4.34188,-1.636708 62.63935,19.429896 62.68545,22.652264 z"
-       id="path20" />
-  </g>
+  <path
+     d="m 180.57617,168.9082 c -17.04594,12.56707 -16.35318,77.01695 -16.51172,87.0918 0.15854,10.07485 -0.53422,74.52473 16.51172,87.0918 18.17546,-0.24854 53.21658,-14.69068 82.66602,-30.42578 C 303,291.42306 331.55941,262.51883 331.42383,256 331.55941,249.48117 303,220.57694 263.24219,199.33398 233.79275,183.59888 198.75163,169.15674 180.57617,168.9082 Z"
+     style="fill:#87deaa;stroke:#000000;stroke-width:8.67251;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+     id="path1"
+     transform="matrix(2.7837827,0,0,2.7510269,-433.66747,-448.26289)" />
 </svg>
