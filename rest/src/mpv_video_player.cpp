@@ -1,9 +1,6 @@
 #include "webvplayer/mpv_video_player.hpp"
-#include "crow/logging.h"
 #include "webvplayer/video_player.hpp"
 #include <mpv/client.h>
-#include <optional>
-#include <tuple>
 
 using webvplayer::MPVVideoPlayer;
 using webvplayer::VideoPlayer;
@@ -107,9 +104,12 @@ namespace {
 			char const *type = mpv_get_property_string(mpv, std::format("track-list/{}/type", i).c_str());
 			if(string(type) == targetType) {
 				char const *trackTitle = mpv_get_property_string(mpv, std::format("track-list/{}/title", i).c_str());
+				char const *trackLang = mpv_get_property_string(mpv, std::format("track-list/{}/lang", i).c_str());
 				int64_t id;
 				mpv_get_property(mpv, std::format("track-list/{}/id", i).c_str(), MPV_FORMAT_INT64, &id);
-				list.emplace_back(trackTitle==nullptr? "default" : trackTitle, id, false);
+				list.emplace_back(trackTitle!=nullptr? trackTitle : 
+						trackLang!=nullptr? trackLang : "default", 
+						id, false);
 
 				int bSelected;
 				mpv_get_property(mpv, std::format("track-list/{}/selected", i).c_str(), MPV_FORMAT_FLAG, &bSelected);
