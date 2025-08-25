@@ -95,7 +95,19 @@ const Player = () => {
 				</div>
 				<div>
 					<label>Audio</label>
+					<select onchange={e => sendAction('select-audio-track', {track: e.target.value})}>
+						<For each={state()['audio-tracks']}>{track => <option value={track.id}>{track.title}</option>}</For>
+					</select>
+				</div>
+				<div>
 					<label>Subtitles</label>
+					<select onchange={e => sendAction('select-subs-track', {track: e.target.value})}>
+						<option value='none'>None</option>
+						<For each={state()['subs-tracks']}>{track => <option value={track.id}>{track.title}</option>}</For>
+					</select>
+				</div>
+				<div>
+					<label>Time position: {state()['time-pos']}</label>
 				</div>
 			</Show>
 		</div>
