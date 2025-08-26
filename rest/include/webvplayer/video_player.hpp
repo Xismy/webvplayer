@@ -55,6 +55,7 @@ namespace webvplayer {
 		virtual void go(int value, TimePosType type = TimePosType::RELATIVE) = 0;
 		virtual void selectAudioTrack(std::size_t const &track) = 0;
 		virtual void selectSubtitlesTrack(std::size_t const &track) = 0;
+		virtual void setVolume(int vol) = 0;
 
 		virtual Status status() const = 0;
 		virtual fs::path file() const = 0;
@@ -62,6 +63,7 @@ namespace webvplayer {
 		virtual std::chrono::seconds duration() const = 0;
 		virtual TrackList <TrackType::AUDIO> getAudioTracks() const = 0;
 		virtual TrackList <TrackType::SUBTITLES> getSubtitlesTracks() const = 0;
+		virtual int getVolume() const = 0;
 		virtual ~VideoPlayer() {}
 	};
 }

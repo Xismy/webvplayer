@@ -130,3 +130,12 @@ VideoPlayer::TrackList<VideoPlayer::TrackType::SUBTITLES> MPVVideoPlayer::getSub
     return getTracks<VideoPlayer::TrackType::SUBTITLES>(mpv, "sub");
 }
 
+int MPVVideoPlayer::getVolume() const {
+	int64_t vol;
+	mpv_get_property(mpv, "volume", MPV_FORMAT_INT64, &vol);
+	return static_cast<int>(vol);
+}
+
+void MPVVideoPlayer::setVolume(int vol) {
+	mpv_command_string(mpv, std::format("set volume {}", vol).c_str());
+}

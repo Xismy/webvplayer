@@ -29,7 +29,8 @@ namespace webvplayer {
 			RESUME,
 			GOTO,
 			SELETC_AUDIO_TRACK,
-			SELECT_SUBTITLES_TRACK
+			SELECT_SUBTITLES_TRACK,
+			SET_VOLUME
 		};
 
 		using VideoPlayerActionR = EnumClassReflection<VideoPlayerAction, 
@@ -41,7 +42,8 @@ namespace webvplayer {
 			 "resume",
 			 "goto",
 			 "select-audio-track",
-			 "select-subs-track"
+			 "select-subs-track",
+			 "set-volume"
 		>;
 
 	private:
@@ -70,6 +72,7 @@ namespace webvplayer {
 		crow::response setTime(crow::json::rvalue const &body) const;
 		crow::response selectAudioTrack(crow::json::rvalue const &body) const;
 		crow::response selectSubtitlesTrack(crow::json::rvalue const &body) const;
+		crow::response setVolume(crow::json::rvalue const &body) const;
 		void addConnection(crow::websocket::connection &conn);
 		void removeConnection(crow::websocket::connection &conn);
 		

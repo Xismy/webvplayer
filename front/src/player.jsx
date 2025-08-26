@@ -91,7 +91,8 @@ const Player = () => {
 				</div>
 				<div>
 					<label>Volume</label>
-					<input type='range'/>
+					<input type='range' min='0' max='130' value={state().volume} onchange={e => sendAction('set-volume', {volume: e.target.value})} />
+					<label>{state().volume}</label>
 				</div>
 				<div>
 					<label>Audio</label>

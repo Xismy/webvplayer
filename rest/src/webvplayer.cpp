@@ -201,6 +201,7 @@ crow::response Server::getPlayerStatus() const {
 		{"time-pos", player_->currentTime().count()},
 		{"length", player_->duration().count()},
 		{"uri", nullptr},
+		{"volume", player_->getVolume()}
 	};
 
 	if(loadedResource_.has_value()) {
@@ -238,6 +239,8 @@ crow::response Server::dispatchPlayerAction(crow::request const &req) {
 			return selectAudioTrack(body);
 		case VideoPlayerAction::SELECT_SUBTITLES_TRACK:
 			return selectSubtitlesTrack(body);
+		case VideoPlayerAction::SET_VOLUME:
+			return setVolume(body);
 		case VideoPlayerAction::UNKNOWN:
 		default:
 			CROW_LOG_ERROR << "Unknown action: \"" << actionStr << "\".";
@@ -336,6 +339,26 @@ crow::response Server::selectAudioTrack(crow::json::rvalue const &body) const {
 
 crow::response Server::selectSubtitlesTrack(crow::json::rvalue const &body) const {
 	return selectTrack<VideoPlayer::TrackType::SUBTITLES>(player_, body);
+}
+
+crow::response Server::setVolume(crow::json::rvalue const &body) const {
+	if(!body.has("volume")) {
+		CROW_LOG_ERROR << "Missing parameter \"volume\".";
+		return crow::response(crow::BAD_REQUEST);
+	}
+
+	int vol = body["volume"].i();
+	if(vol < 0) vol = 0;
+	if(vol> 130) vol= 130;
+	player_->setVolume(vol);
+
+	crow::json::wvalue event {
+		{"action", VideoPlayerActionR(VideoPlayerAction::SET_VOLUME).str()},
+		{"volume", vol}
+	};
+	sendEvent_(event);
+
+	return crow::response(crow::OK);
 }
 
 void Server::addConnection(crow::websocket::connection &conn) {
