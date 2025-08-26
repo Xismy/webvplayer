@@ -29,6 +29,7 @@ namespace webvplayer {
 		void go(int value, TimePosType type = TimePosType::RELATIVE) override;
 		void selectAudioTrack(std::size_t const &track) override;
 		void selectSubtitlesTrack(std::size_t const &track) override;
+		void setVolume(int vol) override;
 
 		Status status() const override;
 		fs::path file() const override;
@@ -36,6 +37,7 @@ namespace webvplayer {
 		std::chrono::seconds duration() const override;
 		TrackList <TrackType::AUDIO> getAudioTracks() const override;
 		TrackList <TrackType::SUBTITLES> getSubtitlesTracks() const override;
+		int getVolume() const override;
 	};
 
 } // namespace webvplayer
