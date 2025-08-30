@@ -14,7 +14,7 @@ async function parse_icon(icon) {
 }
 
 async function gen_icons() {
-	const icons = await Promise.all(['play', 'pause', 'stop', 'ff', 'next', 'home'].map(parse_icon));
+	const icons = await Promise.all(['play', 'pause', 'stop', 'ff', 'next', 'home', 'watched', 'nonWatched'].map(parse_icon));
 	babel.transform(icons.join('\n\n'), {
 			presets: ['babel-preset-solid'],
 		}, (err, result) => {

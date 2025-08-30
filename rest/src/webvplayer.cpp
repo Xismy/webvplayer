@@ -1,5 +1,6 @@
 #include "webvplayer/webvplayer.hpp"
 #include "crow/app.h"
+#include "crow/http_request.h"
 #include "crow/http_response.h"
 #include "crow/json.h"
 #include "crow/logging.h"
@@ -12,6 +13,7 @@
 #include <fstream>
 #include <optional>
 #include <string>
+#include <unistd.h>
 #include <unordered_set>
 #include <ranges>
 
@@ -119,6 +121,7 @@ Server::Server() noexcept {
 	CROW_ROUTE(app_, "/list/<path>")([this](fs::path const &resource) { return this->listResources(resource); });
 	CROW_ROUTE(app_, "/player").methods(crow::HTTPMethod::GET)([this]() { return this->getPlayerStatus(); });
 	CROW_ROUTE(app_, "/player").methods(crow::HTTPMethod::POST)([this](crow::request const &req) { return this->dispatchPlayerAction(req); });
+	CROW_ROUTE(app_, "/mark_watched").methods(crow::HTTPMethod::POST)([this](crow::request const &req) { return this->markAsWatched(req); });
 	CROW_ROUTE(app_, "/poweroff").methods(crow::HTTPMethod::POST)([]() {system("poweroff"); return crow::response(crow::OK); });
 	CROW_WEBSOCKET_ROUTE(app_, "/player_update").onopen(
 		[this](crow::websocket::connection & conn) { this->addConnection(conn); }
@@ -137,6 +140,10 @@ void Server::run(vector<string> const &args) {
 		if(arg == "-c" || arg == "--config") {
 			CROW_LOG_INFO << "Reading config file: [" << *it << "].";
 			configFile.open(*(it++));
+		}
+		else if(arg == "-d" || arg == "--data") {
+			CROW_LOG_INFO << "Using data file: [" << *it << "].";
+			playbackHistory_.load(*(it++));
 		}
 		else 
 			throw BadArgumentException(arg.c_str());
@@ -159,6 +166,7 @@ void Server::run(vector<string> const &args) {
 	loadResources(resources_, resources_.root(), resourcesList);
 	player_ = getPlayerByName(jsonGet(config,"video player").s());
 	app_.port(jsonGet(config, "api port").i()).run();
+	playbackHistory_.dump();
 }
 
 VideoPlayer *Server::getPlayerByName(string const &player) {
@@ -181,10 +189,13 @@ crow::response Server::listResources(fs::path resource) const {
 		resource = fs::path(toResourceName(resource.string()));
 		
 		for(ResourceTree::Node const &child : resources_.list(resource)) {
-			response[response.size()] = crow::json::wvalue {
+			auto &last = response[response.size()];
+			last = crow::json::wvalue {
 				{"name", child.name()},
 				{"mime", child.mime()}
 			};
+			if(child.mime().starts_with("video/"))
+					last["watched"] = playbackHistory_.hasBeenWatched(resource, child.name());
 		}
 
 		return response;
@@ -261,6 +272,7 @@ crow::response Server::load(crow::json::rvalue const &body, bool bPlay) {
 		auto const &resource = resources_.find(uri);
 		loadedResource_ = uri;
 		player_->load(resource, bPlay);
+		updatePlaybackHistory_();
 		crow::json::wvalue event(body);
 		trackListToJson(event["audio-tracks"], player_->getAudioTracks());
 		trackListToJson(event["subs-tracks"], player_->getSubtitlesTracks());
@@ -276,7 +288,7 @@ crow::response Server::load(crow::json::rvalue const &body, bool bPlay) {
 	}
 }
 
-crow::response Server::resume() const {
+crow::response Server::resume() {
 	player_->resume();
 
 	crow::json::wvalue event {
@@ -288,8 +300,9 @@ crow::response Server::resume() const {
 	return crow::response(crow::OK);
 }
 
-crow::response Server::pause() const {
+crow::response Server::pause() {
 	player_->pause();
+	updatePlaybackHistory_();
 
 	crow::json::wvalue event {
 		{"action", VideoPlayerActionR(VideoPlayerAction::PAUSE).str()},
@@ -300,6 +313,7 @@ crow::response Server::pause() const {
 }
 
 crow::response Server::stop() {
+	updatePlaybackHistory_();
 	player_->stop();
 	loadedResource_.reset();
 	
@@ -361,6 +375,25 @@ crow::response Server::setVolume(crow::json::rvalue const &body) const {
 	return crow::response(crow::OK);
 }
 
+crow::response Server::markAsWatched(crow::request const &req) {
+	auto body = crow::json::load(req.body);
+		
+	if(!body.has("uri")) {
+		CROW_LOG_ERROR << "Missing parameter: \"uri\".";
+		return crow::response(crow::BAD_REQUEST);
+	}
+
+	if(!body.has("watched")) {
+		CROW_LOG_ERROR << "Missing parameter: \"watched\".";
+		return crow::response(crow::BAD_REQUEST);
+	}
+	
+	fs::path uri(body["uri"].s());
+	playbackHistory_.setWatched(uri.parent_path(), uri.filename(), body["watched"].b());
+
+	return crow::response(crow::OK);
+}
+
 void Server::addConnection(crow::websocket::connection &conn) {
     CROW_LOG_INFO << "Client connected: " << conn.get_remote_ip();
     conns_.insert(&conn);
@@ -376,6 +409,13 @@ void Server::sendEvent_(crow::json::wvalue const &json) const {
     for(auto *conn : conns_) {
 		conn->send_text(json.dump());
     }
+}
+
+void Server::updatePlaybackHistory_() {
+	if(!loadedResource_)
+		return;
+
+	playbackHistory_.setProgress(loadedResource_->parent_path(), loadedResource_->filename(), player_->currentTime());
 }
 
 Server::~Server() {

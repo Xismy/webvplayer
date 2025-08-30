@@ -2,6 +2,7 @@
 #define __WEBVPLAYER_HPP__
 
 #include "crow/app.h"
+#include "crow/http_request.h"
 #include "crow/json.h"
 #include "crow/middlewares/cors.h"
 #include "crow/websocket.h"
@@ -9,7 +10,8 @@
 #include <unordered_set>
 #include <string>
 #include "webvplayer/resource.hpp"
-#include <webvplayer/video_player.hpp>
+#include "webvplayer/video_player.hpp"
+#include "webvplayer/playback_history.hpp"
 
 namespace webvplayer {
 
@@ -50,10 +52,12 @@ namespace webvplayer {
 		crow::App<crow::CORSHandler> app_;
 		std::unordered_set<crow::websocket::connection*> conns_;
 		ResourceTree resources_;
+		PlaybackHistoryManager playbackHistory_;
 		std::optional<std::filesystem::path> loadedResource_;
 		VideoPlayer *player_ = nullptr;
 
 		void sendEvent_(crow::json::wvalue const &json) const;
+		void updatePlaybackHistory_();
 
 	public:
 		Server() noexcept;
@@ -66,13 +70,14 @@ namespace webvplayer {
 		crow::response getPlayerStatus() const;
 		crow::response dispatchPlayerAction(crow::request const &req);
 		crow::response load(crow::json::rvalue const &body, bool bPlay = false);
-		crow::response resume() const;
-		crow::response pause() const;
+		crow::response resume();
+		crow::response pause();
 		crow::response stop();
 		crow::response setTime(crow::json::rvalue const &body) const;
 		crow::response selectAudioTrack(crow::json::rvalue const &body) const;
 		crow::response selectSubtitlesTrack(crow::json::rvalue const &body) const;
 		crow::response setVolume(crow::json::rvalue const &body) const;
+		crow::response markAsWatched(crow::request const &body);
 		void addConnection(crow::websocket::connection &conn);
 		void removeConnection(crow::websocket::connection &conn);
 		
