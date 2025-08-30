@@ -1,5 +1,5 @@
 import { createSignal, createEffect, createMemo } from 'solid-js';
-import { HomeSvg, PlaySvg } from './icons.js'
+import { HomeSvg, PlaySvg, WatchedSvg, NonWatchedSvg } from './icons.js'
 
 function load(uri, bPlay) {
 	fetch('http://webvplayer:8008/player', {
@@ -8,6 +8,17 @@ function load(uri, bPlay) {
 		body: JSON.stringify({
 			action: bPlay ? 'play' : 'load', 
 			uri: uri
+		})
+	});
+}
+
+function toggleWatched(uri, watched) {
+	fetch('http://webvplayer:8008/mark_watched', {
+		method: 'POST',
+		contentType: 'application/json',
+		body: JSON.stringify({
+			uri: uri,
+			watched: !watched
 		})
 	});
 }
@@ -22,6 +33,14 @@ const Resource = ({resource, uri, setUri}) => {
 				when={resource.mime !== 'application/directory'}
 			>
 				<button onClick={() => load(subdir, false)}><PlaySvg /></button>
+				<button onClick={() => toggleWatched(subdir, resource.watched)}>
+					<Show 
+						when={resource.watched} 
+						fallback={<NonWatchedSvg />}
+					>
+						<WatchedSvg />
+					</Show>
+				</button>
 			</Show>
 		</div>
 	);
