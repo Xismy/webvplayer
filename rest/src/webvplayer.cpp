@@ -157,11 +157,6 @@ void Server::run(vector<string> const &args) {
 	configBuf << configFile.rdbuf();
 	auto config = crow::json::load(configBuf.str());
 
-	auto &cors = app_.get_middleware<crow::CORSHandler>();
-	std::string frontHost = jsonGet(config, "front host").s();
-	std::string frontPort = jsonGet(config, "front port").s();
-	cors.global().origin(std::format("http://{}:{}", frontHost, frontPort));
-
 	auto resourcesList = jsonGet(config, "resources");
 	loadResources(resources_, resources_.root(), resourcesList);
 	player_ = getPlayerByName(jsonGet(config,"video player").s());

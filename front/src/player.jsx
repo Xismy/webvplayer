@@ -1,9 +1,6 @@
 import {createSignal, createEffect} from 'solid-js';
-import {PlaySvg, PauseSvg, StopSvg, FfSvg, NextSvg} from './icons.js'
+import {PlaySvg, PauseSvg, StopSvg, FfSvg, NextSvg} from './icons.jsx'
 
-const HostUrl = 'webvplayer:8008';
-const PlayerEndpoint = 'http://' + HostUrl + '/player';
-const PlayerUpdateEndpoint = 'ws://' + HostUrl + '/player_update';
 
 
 function processUpdate(update, state, setState) {
@@ -34,7 +31,7 @@ function processUpdate(update, state, setState) {
 }
 
 function sendAction(action, params={}) {
-	fetch(PlayerEndpoint, {
+	fetch('/api/player', {
 		method: 'POST',
 		body: JSON.stringify({action: action, ...params})
 	});
@@ -50,13 +47,14 @@ const Player = () => {
 	const [state, setState] = createSignal({uri: null});
 	
 	createEffect(() => {
-		fetch(PlayerEndpoint)
+		fetch('/api/player')
 		.then(response => response.json())
 		.then(data => setState(data));
 	});
 
 	createEffect(() => {
-		new WebSocket(PlayerUpdateEndpoint).onmessage = event => {
+		new WebSocket(`wss://${location.host}/api/player_update`)
+			.onmessage = event => {
 			processUpdate(JSON.parse(event.data), state, setState);
 		}
 	});

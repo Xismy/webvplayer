@@ -1,8 +1,8 @@
 import { createSignal, createEffect, createMemo } from 'solid-js';
-import { HomeSvg, PlaySvg, WatchedSvg, NonWatchedSvg } from './icons.js'
+import { HomeSvg, PlaySvg, WatchedSvg, NonWatchedSvg } from './icons.jsx'
 
 function load(uri, bPlay) {
-	fetch('http://webvplayer:8008/player', {
+	fetch('/api/player', {
 		method: 'POST',
 		contentType: 'application/json',
 		body: JSON.stringify({
@@ -13,7 +13,7 @@ function load(uri, bPlay) {
 }
 
 function toggleWatched(uri, watched) {
-	fetch('http://webvplayer:8008/mark_watched', {
+	fetch('/api/mark_watched', {
 		method: 'POST',
 		contentType: 'application/json',
 		body: JSON.stringify({
@@ -59,7 +59,7 @@ const Explorer = () => {
 	const [resources, setResources] = createSignal([]);
 
 	createEffect(() => {
-		fetch('http://webvplayer:8008/list/' + uri())
+		fetch('/api/list/' + uri())
 		.then(response => response.json())
 		.then(data => setResources(data));
 	});
